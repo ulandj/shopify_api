@@ -9,5 +9,10 @@ module ShopifyAPI
     def self.search(params)
       find(:all, from: :search, params: params)
     end
+
+    def invite
+      load_attributes_from_response(post(:invite))
+    end
+
   end
 end
