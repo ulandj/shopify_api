@@ -32,11 +32,19 @@ module ShopifyAPI
 
     module RedoIfTemporaryError
       def request(*args)
+        binding.pry
         super
       rescue ActiveResource::ClientError, ActiveResource::ServerError => e
         if should_retry? && e.response.class.in?([Net::HTTPTooManyRequests, Net::HTTPInternalServerError])
-          wait
-          request *args
+          if e.response.class.in?([Net::HTTPTooManyRequests])
+            wait
+            request *args
+          else
+            sleep 30
+            increase_server_error_counter
+            raise if server_error_counter == 10
+            request *args
+          end
         else
           raise
         end
@@ -48,6 +56,14 @@ module ShopifyAPI
 
       def should_retry?
         [true, nil].include? Thread.current[:retry_temporary_errors]
+      end
+
+      def increase_server_error_counter
+        @server_error_counter = server_error_counter + 1
+      end
+
+      def server_error_counter
+        @server_error_counter ||= 0
       end
     end
 
